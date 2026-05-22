@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BeeHive Output Hub</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Rammetto+One&display=swap" rel="stylesheet">
+    <!-- JSZip Library dependency link -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-yellow: #FFDE4D;
+            --dark-yellow: #F4B400;
+            --sky-blue: #AEE2FF;
+            --dark-blue: #4A90E2;
+            --grass-green: #93E9BE;
+            --dark-green: #2ECC71;
+            --white: #FFFFFF;
+            --charcoal: #333333;
+            --honeycomb-color: rgba(244, 180, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Jua', sans-serif;
+        }
+
+        body {
+            background-color: var(--sky-blue);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.6) 0%, transparent 20%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.6) 0%, transparent 25%);
+            color: var(--charcoal);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Ambient Honeycomb Background */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 20%, var(--sky-blue) 20%, var(--sky-blue) 80%, transparent 80%, transparent), radial-gradient(circle, transparent 20%, var(--sky-blue) 20%, var(--sky-blue) 80%, transparent 80%, transparent) 25px 25px, linear-gradient(30deg, var(--honeycomb-color) 25%, transparent 25%, transparent 75%, var(--honeycomb-color) 75%, var(--honeycomb-color)), linear-gradient(30deg, var(--honeycomb-color) 25%, transparent 25%, transparent 75%, var(--honeycomb-color) 75%, var(--honeycomb-color)) 25px 25px;
+            background-size: 50px 50px;
+            z-index: -2;
+        }
+
+        /* Top Left Header Badge */
+        .creator-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid var(--primary-yellow);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+            line-height: 1.3;
+        }
+        .creator-badge strong {
+            color: var(--dark-blue);
+        }
+
+        /* Sound Toggle Button */
+        .audio-toggle-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--white);
+            border: 3px solid var(--primary-yellow);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+            transition: transform 0.2s;
+        }
+        .audio-toggle-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Floating Decorative Bees */
+        .floating-bee {
+            position: fixed;
+            font-size: 2rem;
+            pointer-events: none;
+            z-index: -1;
+            animation: floatBee 12s infinite ease-in-out;
+        }
+        @keyframes floatBee {
+            0% { transform: translate(0, 0) scaleX(1); }
+            45% { transform: translate(100vw, -30vh) scaleX(1); }
+            50% { transform: translate(100vw, -30vh) scaleX(-1); }
+            95% { transform: translate(-10vw, 20vh) scaleX(-1); }
+            100% { transform: translate(0, 0) scaleX(1); }
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 20px 20px;
+        }
+
+        h1 {
+            font-family: 'Rammetto One', sans-serif;
+            font-size: 3.5rem;
+            color: var(--white);
+            text-shadow: 4px 4px 0px var(--dark-yellow), 7px 7px 0px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: var(--charcoal);
+            background: rgba(255,255,255,0.6);
+            display: inline-block;
+            padding: 5px 20px;
+            border-radius: 15px;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Main Menu Grid */
+        .grade-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .grade-card {
+            background: var(--white);
+            border-radius: 30px;
+            border: 5px solid var(--primary-yellow);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grade-card:hover {
+            transform: translateY(-10px) rotate(2deg);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .grade-card::before {
+            content: "🐝";
+            position: absolute;
+            top: -10px; right: -10px;
+            font-size: 3rem;
+            opacity: 0.15;
+            transform: rotate(20deg);
+        }
+
+        .folder-icon {
+            font-size: 4.5rem;
+            margin-bottom: 15px;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        .grade-card:hover .folder-icon {
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-12px); }
+        }
+
+        .grade-title {
+            font-size: 1.8rem;
+            color: var(--dark-blue);
+        }
+
+        /* Modals & Popups */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--white);
+            border-radius: 35px;
+            border: 6px solid var(--primary-yellow);
+            width: 90%;
+            max-width: 550px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            transform: scale(0.7);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            font-size: 2.2rem;
+            color: var(--dark-yellow);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .subfolder-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .subfolder-btn {
+            background: var(--sky-blue);
+            border: 3px solid var(--dark-blue);
+            padding: 20px 10px;
+            border-radius: 20px;
+            font-size: 1.6rem;
+            color: var(--charcoal);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0 var(--dark-blue);
+        }
+
+        .subfolder-btn:hover {
+            background: var(--primary-yellow);
+            border-color: var(--dark-yellow);
+            box-shadow: 0 6px 0 var(--dark-yellow);
+            transform: translateY(-2px);
+        }
+
+        .subfolder-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 var(--dark-yellow);
+        }
+
+        .close-btn {
+            margin-top: 25px;
+            background: #FF7B7B;
+            border: 3px solid #C0392B;
+            box-shadow: 0 5px 0 #C0392B;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+        .close-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #C0392B;
+        }
+
+        /* Workspace Screen */
+        .workspace {
+            display: none;
+        }
+
+        .workspace.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.9);
+            padding: 15px 25px;
+            border-radius: 25px;
+            border: 4px solid var(--primary-yellow);
+            margin-bottom: 30px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+        }
+
+        .nav-title {
+            font-size: 1.6rem;
+            color: var(--dark-blue);
+        }
+
+        .back-btn {
+            background: var(--grass-green);
+            border: 3px solid var(--dark-green);
+            box-shadow: 0 4px 0 var(--dark-green);
+            padding: 8px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .back-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 var(--dark-green);
+        }
+
+        /* Control Action Buttons Panel */
+        .action-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .action-btn {
+            padding: 15px 10px;
+            border-radius: 20px;
+            font-size: 1.05rem;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            text-align: center;
+            border-width: 4px;
+            border-style: solid;
+        }
+
+        .action-btn span:first-child {
+            font-size: 2rem;
+        }
+
+        .btn-upload { background: #FFF3CD; border-color: #FFC107; box-shadow: 0 5px 0 #FFC107; color: #856404; }
+        .btn-audio { background: #D1ECF1; border-color: #17A2B8; box-shadow: 0 5px 0 #17A2B8; color: #0C5460; }
+        .btn-video { background: #F8D7DA; border-color: #DC3545; box-shadow: 0 5px 0 #DC3545; color: #721C24; }
+        .btn-save { background: #D4EDDA; border-color: #28A745; box-shadow: 0 5px 0 #28A745; color: #155724; }
+        .btn-zip-shortcut { background: #E2D4F0; border-color: #9B59B6; box-shadow: 0 5px 0 #9B59B6; color: #4A235A; }
+        .btn-reset { background: #FFE5E5; border-color: #FA8072; box-shadow: 0 5px 0 #FA8072; color: #A52A2A; }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 transparent;
+        }
+
+        /* Hide native file inputs */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Live Camera Recorder Element Styling */
+        #camera-preview-container {
+            display: none;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 5px solid var(--primary-yellow);
+        }
+        #camera-preview {
+            width: 100%;
+            display: block;
+        }
+        .cam-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 0; width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* Output Gallery Sections */
+        .gallery-container {
+            background: rgba(255,255,255,0.85);
+            border-radius: 30px;
+            border: 4px solid var(--primary-yellow);
+            padding: 25px;
+            min-height: 300px;
+        }
+
+        .gallery-header {
+            font-size: 1.5rem;
+            border-bottom: 3px dashed var(--primary-yellow);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--dark-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .output-card {
+            background: var(--white);
+            border: 3px solid #E0E0E0;
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.05);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .output-preview {
+            width: 100%;
+            height: 140px;
+            background-color: #F9F9F9;
+            border-radius: 12px;
+            object-fit: cover;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .output-preview.audio-type {
+            background: var(--sky-blue);
+            font-size: 3rem;
+        }
+
+        .output-meta {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            word-break: break-all;
+            padding: 0 5px;
+            position: relative;
+        }
+
+        .card-controls-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px dashed #DDD;
+        }
+
+        /* Responsive Action Controls Bar Under Output Cards */
+        .card-controls-row button {
+            padding: 6px 4px;
+            font-size: 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        /* IMPROVEMENT 3: Mini Present Button Styling */
+        .present-card-btn {
+            background: #EAF9F1;
+            border: 2px solid var(--dark-green);
+            color: var(--dark-green);
+        }
+        .present-card-btn:hover {
+            transform: scale(1.05);
+            background: var(--grass-green);
+        }
+
+        .rename-card-btn {
+            background: #E8F4FD;
+            border: 2px solid var(--dark-blue);
+            color: var(--dark-blue);
+        }
+        .rename-card-btn:hover {
+            animation: wiggle 0.3s ease infinite alternate;
+            background: var(--sky-blue);
+        }
+
+        @keyframes wiggle {
+            0% { transform: rotate(-4deg); }
+            100% { transform: rotate(4deg); }
+        }
+
+        .delete-card-btn {
+            background: #FF4D4D;
+            border: 2px solid #C0392B;
+            color: white;
+        }
+        .delete-card-btn:hover {
+            background: #C0392B;
+        }
+
+        /* Honey Splash & Reset Deletion Styles */
+        .honey-splash-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #F4B400 10%, transparent 60%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+            transition: all 0.5s ease-out;
+            border-radius: 25px;
+        }
+        .honey-splash-active {
+            animation: honeySplashAnim 0.6s ease-out forwards;
+        }
+        @keyframes honeySplashAnim {
+            0% { opacity: 0; transform: scale(0.2); }
+            50% { opacity: 0.85; }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        /* ZIP Loading Layer Overlay */
+        .zip-progress-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .zip-progress-overlay.active {
+            display: flex;
+        }
+        .zipping-bee {
+            font-size: 4rem;
+            animation: flyPayload 1.5s infinite ease-in-out;
+            margin-bottom: 15px;
+        }
+        @keyframes flyPayload {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        .progress-track {
+            width: 80%;
+            max-width: 400px;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--primary-yellow);
+            margin-top: 15px;
+        }
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-yellow), var(--dark-yellow));
+            transition: width 0.2s ease;
+        }
+
+        /* Lightbox Output Viewer Feature */
+        .lightbox {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content-wrapper {
+            position: relative;
+            width: 85%;
+            height: 75%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .lightbox-media {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            transition: transform 0.1s ease;
+            transform-origin: center center;
+        }
+
+        .lightbox-audio-ui {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(255,255,255,0.2);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: var(--primary-yellow);
+            border: 3px solid var(--white);
+            font-size: 1.5rem;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            gap: 15px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+
+        .zoom-btn {
+            background: var(--white);
+            border: none;
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Presentation Workspace Canvas Mode */
+        .presentation-workspace {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #222222;
+            z-index: 300;
+            display: none;
+            flex-direction: column;
+        }
+
+        .presentation-workspace.active {
+            display: flex;
+        }
+
+        .pres-header {
+            background: #111;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #FFF;
+            border-bottom: 2px solid var(--dark-yellow);
+        }
+
+        .pres-stage {
+            flex: 1;
+            position: relative;
+            background: #1e1e1e;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pres-media-frame {
+            max-width: 95%;
+            max-height: 95%;
+            pointer-events: none;
+        }
+
+        #presTransformContainer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        .annotation-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+            cursor: crosshair;
+        }
+
+        /* Custom Laser Pointer Layer Element */
+        #laser-pointer-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        .annotation-toolbar {
+            background: #2c3e50;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-top: 3px solid var(--primary-yellow);
+            z-index: 10;
+        }
+
+        .tool-btn {
+            background: #34495e;
+            border: 2px solid #7f8c8d;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+
+        .tool-btn.active, .tool-btn:hover {
+            background: var(--dark-yellow);
+            border-color: var(--white);
+        }
+
+        .color-swatch {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            display: inline-block;
+        }
+        .color-swatch.active {
+            transform: scale(1.2);
+            box-shadow: 0 0 8px #FFF;
+        }
+
+        /* Sticky Notes Element Features */
+        .sticky-note {
+            position: absolute;
+            width: 160px; height: 160px;
+            background: #FFF9A6;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+            padding: 15px 10px 10px 10px;
+            border-radius: 4px;
+            z-index: 20;
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+        }
+        .sticky-note textarea {
+            width: 100%; height: 100%;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            color: #333;
+        }
+        .sticky-note .close-note {
+            position: absolute;
+            top: 2px; right: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        /* Custom Input Styling inside Modal */
+        .modal-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 3px solid var(--sky-blue);
+            border-radius: 15px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            outline: none;
+            font-family: 'Jua', sans-serif;
+            text-align: center;
+        }
+        .modal-input:focus {
+            border-color: var(--dark-yellow);
+        }
+
+        /* Modal Button Split Container Grid */
+        .modal-btn-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .btn-confirm {
+            background: var(--grass-green);
+            border: 3px solid var(--dark-green);
+            box-shadow: 0 5px 0 var(--dark-green);
+            color: var(--charcoal);
+            padding: 10px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .btn-confirm:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 var(--dark-green);
+        }
+
+        /* Auxiliary Utilities Layouts */
+        .notification-popup {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--charcoal);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            z-index: 1000;
+            transition: bottom 0.4s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .notification-popup.active {
+            bottom: 30px;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Backup system action alignment */
+        .backup-row {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .btn-secondary {
+            background: #E2E3E5; border: 2px solid #6C757D; padding: 8px 18px; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: bold;
+        }
+
+        /* Responsive Optimization Tweaks */
+        @media(max-width: 768px) {
+            h1 { font-size: 2.2rem; }
+            .subfolder-grid { grid-template-columns: repeat(1, 1fr); }
+            .action-panel { grid-template-columns: repeat(2, 1fr); }
+            .creator-badge { position: relative; top: 0; left: 0; display: inline-block; margin-bottom: 10px; }
+            header { padding-top: 20px; }
+            .card-controls-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Confetti Overlays Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Creator Reference Header Corner Display -->
+    <div class="creator-badge">
+        Made by: <strong>Mikee B. Gamboa</strong> "Teacher Mikee", F.E.T<br>
+        🏫 <em>BeeHive Output Hub</em>
+    </div>
+
+    <!-- Buzzing Ambient Audio Toggle Control Button -->
+    <button class="audio-toggle-btn" id="soundToggle" title="Toggle Buzzing SFX">🔊</button>
+
+    <!-- Main Decorative Animated Bees Elements -->
+    <div class="floating-bee" style="top: 20%; left: -50px; animation-delay: 0s;">🐝</div>
+    <div class="floating-bee" style="top: 60%; left: -50px; animation-delay: 4s;">🐝</div>
+
+    <!-- Application App Root Shell -->
+    <div class="container">
+        
+        <header id="mainHeader">
+            <h1>BeeHive Output Hub</h1>
+            <p class="subtitle">Classroom Portfolio & Presentation System 🌻</p>
+        </header>
+
+        <!-- HOMEPAGE MAIN MENU DASHBOARD SCREEN LAYER -->
+        <main id="mainMenuScreen">
+            <div class="grade-grid">
+                <!-- Grade 3 Card Box -->
+                <div class="grade-card" onclick="openGradeModal('3rd Grade', ['3A', '3B', '3C'])">
+                    <span class="folder-icon">📁</span>
+                    <h2 class="grade-title">3rd Grade</h2>
+                </div>
+                <!-- Grade 4 Card Box -->
+                <div class="grade-card" onclick="openGradeModal('4th Grade', ['4A', '4B', '4C'])">
+                    <span class="folder-icon">📁</span>
+                    <h2 class="grade-title">4th Grade</h2>
+                </div>
+                <!-- Grade 5 Card Box -->
+                <div class="grade-card" onclick="openGradeModal('5th Grade', ['5A', '5B', '5C'])">
+                    <span class="folder-icon">📁</span>
+                    <h2 class="grade-title">5th Grade</h2>
+                </div>
+                <!-- Grade 6 Card Box -->
+                <div class="grade-card" onclick="openGradeModal('6th Grade', ['6A', '6B', '6C'])">
+                    <span class="folder-icon">📁</span>
+                    <h2 class="grade-title">6th Grade</h2>
+                </div>
+            </div>
+
+            <!-- Global Backup Management Trigger Row Links -->
+            <div class="backup-row">
+                <button class="btn-secondary" onclick="exportOrganizedZipSystem(false)">📦 Export All to Organized ZIP File</button>
+                <button class="btn-secondary" onclick="exportBackupJSON()">📥 Export Data System Backup</button>
+                <button class="btn-secondary" onclick="triggerImportBackupJSON()">📤 Import Data System Backup</button>
+                <input type="file" id="importBackupFile" accept=".json" onchange="importBackupJSON(event)">
+            </div>
+        </main>
+
+        <!-- SUBFOLDER ROOM SELECTOR INTERACTIVE POPUP MODAL DIALOG -->
+        <div class="modal-overlay" id="gradeModalOverlay">
+            <div class="modal-card">
+                <h3 class="modal-header" id="modalGradeTitle">Select Section</h3>
+                <div class="subfolder-grid" id="modalSubfolderGrid"></div>
+                <button class="close-btn" onclick="closeGradeModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- DYNAMIC CUSTOM OVERLAY MODALS FOR ACTIONS -->
+        <!-- Rename File Modal Popup Dialog -->
+        <div class="modal-overlay" id="renameModalOverlay">
+            <div class="modal-card">
+                <h3 class="modal-header">✏️ Rename Output</h3>
+                <p style="margin-bottom:15px; color:#666;" id="renameExtensionHint">Extension: .jpeg</p>
+                <input type="text" id="renameInputField" class="modal-input" placeholder="Enter student name or title">
+                <div class="modal-btn-row">
+                    <button class="btn-confirm" onclick="executeFileRenameAction()">Save Changes</button>
+                    <button class="close-btn" style="margin:0;" onclick="closeRenameModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Folder Data Confirmation Modal Popup Dialog -->
+        <div class="modal-overlay" id="resetConfirmModalOverlay">
+            <div class="modal-card" style="border-color: #FA8072;">
+                <h3 class="modal-header" style="color:#C0392B;">🍯 Honey Splash Warning</h3>
+                <p style="font-size:1.4rem; margin-bottom:20px; line-height:1.4;">Are you sure you want to erase all outputs?</p>
+                <div class="modal-btn-row">
+                    <button class="btn-confirm" style="background:#FF7B7B; border-color:#C0392B; box-shadow: 0 5px 0 #C0392B;" onclick="executeFolderResetAction()">Yes, Reset</button>
+                    <button class="close-btn" style="margin:0;" onclick="closeResetModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ASYNC PACKAGING ZIP LOADER HUD MODAL SCREEN Overlay -->
+        <div class="zip-progress-overlay" id="zipProgressHud">
+            <div class="zipping-bee">🐝🍯</div>
+            <h2 id="zipProgressStatusText" style="font-family:'Rammetto One'; color: var(--primary-yellow);">Packing Honey Jar...</h2>
+            <p id="zipProgressPercentText" style="margin-top:10px; font-size:1.2rem;">Building BeeHive ZIP Archive</p>
+            <div class="progress-track">
+                <div class="progress-bar-fill" id="zipProgressBarFill"></div>
+            </div>
+        </div>
+
+        <!-- INSIDE SPECIFIC ACTIVE CLASS SECTION WORKSPACE INTERFACE -->
+        <section class="workspace" id="workspaceScreen">
+            <div class="nav-bar">
+                <button class="back-btn" onclick="navigateToMainMenu()">⬅ Back</button>
+                <div class="nav-title" id="workspaceActiveTitle">Grade X > Section Y</div>
+                <span style="font-size:2rem;">🍯</span>
+            </div>
+
+            <!-- Primary Workspace Controller Inputs Group -->
+            <div class="action-panel">
+                <button class="action-btn btn-upload" onclick="triggerImageUpload()">
+                    <span>📸</span><span>Upload Image</span>
+                </button>
+                <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageUpload(event)">
+
+                <button class="action-btn btn-audio" id="audioRecordBtn" onclick="toggleAudioRecording()">
+                    <span>🎙️</span><span id="audioRecordBtnText">Record Audio</span>
+                </button>
+
+                <button class="action-btn btn-video" id="videoRecordBtn" onclick="toggleVideoRecording()">
+                    <span>🎥</span><span id="videoRecordBtnText">Record Video</span>
+                </button>
+
+                <button class="action-btn btn-save" onclick="saveToDesktopZipMock()">
+                    <span>💾</span><span>Export Section</span>
+                </button>
+
+                <!-- IMPROVEMENT 1: Added Section-scoped ZIP shortcut exporter button right inside control board panel -->
+                <button class="action-btn btn-zip-shortcut" onclick="exportOrganizedZipSystem(true)">
+                    <span>📦</span><span>Export Section ZIP</span>
+                </button>
+
+                <!-- Clear current active category outputs folder target panel button link context -->
+                <button class="action-btn btn-reset" onclick="triggerFolderResetConfirmation()">
+                    <span>🗑️</span><span>Reset Outputs</span>
+                </button>
+            </div>
+
+            <!-- In-App Webcam Interface Element View -->
+            <div id="camera-preview-container">
+                <video id="camera-preview" autoplay muted playsinline></video>
+                <div class="cam-controls">
+                    <button class="close-btn" style="margin:0; background:#28A745; border-color:#1e7e34;" id="camCaptureBtn">Capture Frame</button>
+                    <button class="close-btn" style="margin:0;" onclick="stopVideoHardwareStreaming()">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Live Media Repository Collection Gallery Space -->
+            <div class="gallery-container" style="position:relative;">
+                <!-- Target Container Box layer element node capturing clear splashes -->
+                <div class="honey-splash-layer" id="honeySplashOverlayNode"></div>
+
+                <div class="gallery-header">
+                    <span>🐝</span> Current Student Submissions Portfolio
+                </div>
+                <div class="gallery-grid" id="galleryItemsGrid"></div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- LIGHTBOX MULTIMEDIA COMPONENT MEDIA VIEWER SCREEN WINDOW -->
+    <div class="lightbox" id="mediaLightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <div class="lightbox-content-wrapper" id="lightboxWrapper">
+            <!-- Dynamically injected elements populate here -->
+        </div>
+        <div class="zoom-controls" id="lightboxZoomControls">
+            <button class="zoom-btn" onclick="adjustZoomLevel(-0.2)">➖</button>
+            <button class="zoom-btn" onclick="resetZoomLevel()">🏠</button>
+            <button class="zoom-btn" onclick="adjustZoomLevel(0.2)">➕</button>
+        </div>
+    </div>
+
+    <!-- PRESENTATION WORKSPACE DRAWING HUD LAYER -->
+    <div class="presentation-workspace" id="presentationWorkspace">
+        <div class="pres-header">
+            <div id="presWorkspaceTitle" style="font-family:'Rammetto One'; color: var(--primary-yellow);">Presentation Screen</div>
+            <div style="font-size:0.9rem; color:#aaa;">Smartboard Compatible Layer Active</div>
+            <button class="close-btn" style="margin:0;" onclick="exitPresentationMode()">Exit Presentation</button>
+        </div>
+        
+        <div class="pres-stage" id="presentationStage">
+            <!-- IMPROVEMENT 5: Target wrapper layer scaling both annotations layer and hosted media concurrently -->
+            <div id="presTransformContainer">
+                <!-- Active item workspace display reference background image/video/audio frame elements container node -->
+                <div id="presMediaHost" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"></div>
+                
+                <!-- Whiteboard Drawing Annotations Workspace Layers -->
+                <canvas class="annotation-canvas" id="annotationCanvas"></canvas>
+                <canvas id="laser-pointer-layer"></canvas>
+            </div>
+        </div>
+
+        <div class="annotation-toolbar">
+            <button class="tool-btn active" id="tool-pen" onclick="setPresentationTool('pen')">✏️ Pen</button>
+            <button class="tool-btn" id="tool-highlighter" onclick="setPresentationTool('highlighter')">🖍️ Highlighter</button>
+            <button class="tool-btn" id="tool-laser" onclick="setPresentationTool('laser')">🔴 Laser Pointer</button>
+            <button class="tool-btn" id="tool-eraser" onclick="setPresentationTool('eraser')">🧽 Eraser</button>
+            
+            <div style="display:flex; align-items:center; gap:5px; margin:0 10px;">
+                <span class="color-swatch active" style="background:#FF0000;" onclick="setAnnotationColor('#FF0000', this)"></span>
+                <span class="color-swatch" style="background:#00FF00;" onclick="setAnnotationColor('#00FF00', this)"></span>
+                <span class="color-swatch" style="background:#FFFF00;" onclick="setAnnotationColor('#FFFF00', this)"></span>
+                <span class="color-swatch" style="background:#0000FF;" onclick="setAnnotationColor('#0000FF', this)"></span>
+                <span class="color-swatch" style="background:#FFFFFF;" onclick="setAnnotationColor('#FFFFFF', this)"></span>
+            </div>
+
+            <!-- IMPROVEMENT 5: Integrated Interactive Presentation Zoom Buttons inside Context Toolbar Panel -->
+            <button class="tool-btn" style="background: #2980B9; border-color:#3498DB;" onclick="adjustPresentationZoom(0.25)">➕ Zoom In</button>
+            <button class="tool-btn" style="background: #2980B9; border-color:#3498DB;" onclick="adjustPresentationZoom(-0.25)">➖ Zoom Out</button>
+            <button class="tool-btn" style="background: #7F8C8D; border-color:#95A5A6;" onclick="resetPresentationZoom()">🔄 Reset</button>
+
+            <button class="tool-btn" onclick="triggerStickyNoteCreation()">📌 Add Note</button>
+            <button class="tool-btn" onclick="undoLastCanvasStroke()">↩️ Undo</button>
+            <button class="tool-btn" onclick="clearPresentationCanvas()">🗑️ Clear Draw</button>
+            <button class="tool-btn" onclick="capturePresentationSnapshot()">📸 Screenshot Portfolio</button>
+        </div>
+    </div>
+
+    <!-- Notification Engine Components Popups Toast UI layout node -->
+    <div class="notification-popup" id="toastNotification">Action complete! 🌟</div>
+
+    <script>
+        /*************************************************************
+         * APPLICATION CORE STATE ENGINE DATA INITIALIZATION
+         *************************************************************/
+        let appState = {
+            currentGrade: "",
+            currentSection: "",
+            ambientSoundActive: false,
+            repositories: {}, // Organized internally: { "Grade 3/3A": [ {id, type, dataUrl, timestamp, name} ] }
+            activeTargetRenameId: null 
+        };
+
+        const HOVER_SOUND_DATA = "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRAAAAAAAAAA/v8BAP//AgD///8BAA==";
+        let hoverAudioNode = new Audio(HOVER_SOUND_DATA);
+        hoverAudioNode.volume = 0.15;
+
+        // Recording Media stream variables tracking pointers
+        let audioRecorderInstance = null;
+        let audioRecordedChunks = [];
+        let videoStreamInstance = null;
+        let videoRecorderInstance = null;
+        let videoRecordedChunks = [];
+
+        // Lightbox manipulation variables monitoring pointers
+        let currentZoomScale = 1;
+        let isDraggingLightboxElement = false;
+        let startDragCoordinates = { x: 0, y: 0 };
+        let currentDragTransformPosition = { x: 0, y: 0 };
+
+        // Presentation Stage configurations state mapping parameters
+        let activePresentationTool = "pen"; // pen, highlighter, laser, eraser
+        let currentAnnotationColor = "#FF0000";
+        let isPaintingOnCanvas = false;
+        let canvasDrawingHistoryStack = [];
+        let canvasContext = null;
+        let laserContext = null;
+        let canvasCurrentPointsTrack = [];
+
+        // IMPROVEMENT 5: Presentation Workspace Transformation metrics parameters initialization mapping
+        let presZoomScale = 1;
+        let presPanOffset = { x: 0, y: 0 };
+        let isPanningPresentationStage = false;
+        let presPanStartCoordinates = { x: 0, y: 0 };
+
+        /*************************************************************
+         * LIFECYCLE INITIALIZATION EVENTS
+         *************************************************************/
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromLocalStorage();
+            attachHoverEffectsToDynamicNodes();
+            initializePresentationCanvasEngines();
+            setupPinchZoomOnLightbox();
+            setupPresentationGestureInterfaces();
+        });
+
+        function showNotification(messageText) {
+            const toast = document.getElementById('toastNotification');
+            toast.innerText = messageText;
+            toast.classList.add('active');
+            setTimeout(() => { toast.classList.remove('active'); }, 3000);
+        }
+
+        function playInterfaceHoverSound() {
+            if (appState.ambientSoundActive) {
+                hoverAudioNode.currentTime = 0;
+                hoverAudioNode.play().catch(()=>{});
+            }
+        }
+
+        function attachHoverEffectsToDynamicNodes() {
+            document.querySelectorAll('.grade-card, .action-btn, .subfolder-btn, .tool-btn, .rename-card-btn, .present-card-btn').forEach(elem => {
+                elem.addEventListener('mouseenter', playInterfaceHoverSound);
+            });
+        }
+
+        function saveStateToLocalStorage() {
+            localStorage.setItem('BeeHiveHub_StateData', JSON.stringify(appState.repositories));
+        }
+
+        function loadStateFromLocalStorage() {
+            const cachedData = localStorage.getItem('BeeHiveHub_StateData');
+            if (cachedData) {
+                try {
+                    appState.repositories = JSON.parse(cachedData);
+                } catch (e) {
+                    appState.repositories = {};
+                }
+            }
+        }
+
+        document.getElementById('soundToggle').addEventListener('click', function() {
+            appState.ambientSoundActive = !appState.ambientSoundActive;
+            if (appState.ambientSoundActive) {
+                this.innerText = "🔊";
+                this.style.background = "var(--primary-yellow)";
+                showNotification("Interface sound responses active! 🐝");
+            } else {
+                this.innerText = "🔇";
+                this.style.background = "var(--white)";
+            }
+        });
+
+        /*************************************************************
+         * MAIN DASHBOARD MODAL FOLDER SYSTEM ARCHITECTURE
+         *************************************************************/
+        function openGradeModal(gradeKeyName, sectionArray) {
+            appState.currentGrade = gradeKeyName;
+            document.getElementById('modalGradeTitle').innerText = `🐝 ${gradeKeyName} Rooms`;
+            
+            const layoutGrid = document.getElementById('modalSubfolderGrid');
+            layoutGrid.innerHTML = "";
+            
+            sectionArray.forEach(sectionCode => {
+                const buttonElement = document.createElement('button');
+                buttonElement.className = "subfolder-btn";
+                buttonElement.innerText = sectionCode;
+                buttonElement.onclick = () => selectActiveSectionWorkspace(sectionCode);
+                buttonElement.addEventListener('mouseenter', playInterfaceHoverSound);
+                layoutGrid.appendChild(buttonElement);
+            });
+
+            document.getElementById('gradeModalOverlay').classList.add('active');
+        }
+
+        function closeGradeModal() {
+            document.getElementById('gradeModalOverlay').classList.remove('active');
+        }
+
+        function selectActiveSectionWorkspace(sectionCode) {
+            appState.currentSection = sectionCode;
+            closeGradeModal();
+            
+            document.getElementById('mainMenuScreen').style.display = 'none';
+            document.getElementById('mainHeader').style.display = 'none';
+            
+            const workspace = document.getElementById('workspaceScreen');
+            workspace.classList.add('active');
+            
+            document.getElementById('workspaceActiveTitle').innerText = `${appState.currentGrade} 🐝 Section ${appState.currentSection}`;
+            renderGalleryItemsViewGrid();
+        }
+
+        function navigateToMainMenu() {
+            document.getElementById('workspaceScreen').classList.remove('active');
+            document.getElementById('mainMenuScreen').style.display = 'block';
+            document.getElementById('mainHeader').style.display = 'block';
+            stopVideoHardwareStreaming();
+        }
+
+        /*************************************************************
+         * GALLERY REPOSITORY PRESENTATION DATA RENDER LAYER
+         *************************************************************/
+        function getActivePathKey() {
+            return `${appState.currentGrade}/${appState.currentSection}`;
+        }
+
+        function renderGalleryItemsViewGrid() {
+            const gridContainer = document.getElementById('galleryItemsGrid');
+            gridContainer.innerHTML = "";
+            
+            const targetKey = getActivePathKey();
+            const collection = appState.repositories[targetKey] || [];
+            
+            if (collection.length === 0) {
+                gridContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#888; font-size:1.2rem;">No submissions yet. Be the first busy bee to upload! 🍯</div>`;
+                return;
+            }
+
+            collection.forEach(itemRecord => {
+                const card = document.createElement('div');
+                card.className = "output-card";
+                card.id = `card_node_${itemRecord.id}`;
+                
+                const previewFrame = document.createElement('div');
+                previewFrame.className = "output-preview";
+                previewFrame.onclick = () => launchMultimediaLightbox(itemRecord);
+
+                if (itemRecord.type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = itemRecord.dataUrl;
+                    img.style.width = "100%"; img.style.height = "100%"; img.style.objectFit = "cover";
+                    previewFrame.appendChild(img);
+                } else if (itemRecord.type === 'audio') {
+                    previewFrame.classList.add('audio-type');
+                    previewFrame.innerText = "🎵";
+                } else if (itemRecord.type === 'video') {
+                    const vid = document.createElement('video');
+                    vid.src = itemRecord.dataUrl;
+                    vid.style.width = "100%"; vid.style.height = "100%"; vid.style.objectFit = "cover";
+                    previewFrame.appendChild(vid);
+                }
+
+                card.appendChild(previewFrame);
+
+                const meta = document.createElement('div');
+                meta.className = "output-meta";
+                meta.innerText = `${itemRecord.name}\n${itemRecord.timestamp}`;
+                card.appendChild(meta);
+
+                const controlRow = document.createElement('div');
+                controlRow.className = "card-controls-row";
+
+                // IMPROVEMENT 3: Added small 🎤 Present Button positioned directly beneath output previews beside rename controls block
+                const presentCardBtn = document.createElement('button');
+                presentCardBtn.className = "present-card-btn";
+                presentCardBtn.innerHTML = "🎤 Present";
+                presentCardBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    enterPresentationMode(itemRecord); // IMPROVEMENT 2: Presents only this specific portfolio item
+                };
+
+                const renameBtn = document.createElement('button');
+                renameBtn.className = "rename-card-btn";
+                renameBtn.innerHTML = "✏️ Rename";
+                renameBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    launchFileRenameModal(itemRecord);
+                };
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = "delete-card-btn";
+                deleteBtn.innerText = "✕ Delete";
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deletePortfolioRecord(itemRecord.id);
+                };
+
+                controlRow.appendChild(presentCardBtn);
+                controlRow.appendChild(renameBtn);
+                controlRow.appendChild(deleteBtn);
+                card.appendChild(controlRow);
+
+                gridContainer.appendChild(card);
+            });
+            attachHoverEffectsToDynamicNodes();
+        }
+
+        function commitOutputRecord(type, dataUrl, explicitFileName = "") {
+            const pathKey = getActivePathKey();
+            if (!appState.repositories[pathKey]) {
+                appState.repositories[pathKey] = [];
+            }
+
+            const timestampLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const itemIdentifier = "output_" + Date.now();
+            
+            let extension = ".jpeg";
+            if(type === 'audio') extension = ".mp3";
+            if(type === 'video') extension = ".mp4";
+
+            const fallBackName = explicitFileName || `${type.toUpperCase()}_${appState.currentSection}_${Date.now()}${extension}`;
+
+            appState.repositories[pathKey].push({
+                id: itemIdentifier,
+                type: type,
+                dataUrl: dataUrl,
+                timestamp: new Date().toLocaleDateString() + " " + timestampLabel,
+                name: fallBackName
+            });
+
+            saveStateToLocalStorage();
+            renderGalleryItemsViewGrid();
+            triggerSuccessConfettiBurst();
+            showNotification("Output securely saved to hive repository! 🎊");
+        }
+
+        function deletePortfolioRecord(itemId) {
+            const pathKey = getActivePathKey();
+            if (appState.repositories[pathKey]) {
+                const targetNode = document.getElementById(`card_node_${itemId}`);
+                if (targetNode) {
+                    targetNode.style.transform = "scale(0.5)";
+                    targetNode.style.opacity = "0";
+                    setTimeout(() => {
+                        appState.repositories[pathKey] = appState.repositories[pathKey].filter(x => x.id !== itemId);
+                        saveStateToLocalStorage();
+                        renderGalleryItemsViewGrid();
+                        showNotification("Submission removed.");
+                    }, 300);
+                } else {
+                    appState.repositories[pathKey] = appState.repositories[pathKey].filter(x => x.id !== itemId);
+                    saveStateToLocalStorage();
+                    renderGalleryItemsViewGrid();
+                }
+            }
+        }
+
+        /*************************************************************
+         * RENAME FILE FUNCTION UTILITIES
+         *************************************************************/
+        function launchFileRenameModal(itemRecord) {
+            appState.activeTargetRenameId = itemRecord.id;
+            
+            const lastDotIndex = itemRecord.name.lastIndexOf('.');
+            let coreName = itemRecord.name;
+            let extHint = "";
+            if (lastDotIndex !== -1) {
+                coreName = itemRecord.name.substring(0, lastDotIndex);
+                extHint = itemRecord.name.substring(lastDotIndex);
+            }
+
+            document.getElementById('renameExtensionHint').innerText = `Extension: ${extHint || 'None'}`;
+            const inputField = document.getElementById('renameInputField');
+            inputField.value = coreName;
+            
+            document.getElementById('renameModalOverlay').classList.add('active');
+            setTimeout(() => inputField.focus(), 200);
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameModalOverlay').classList.remove('active');
+            appState.activeTargetRenameId = null;
+        }
+
+        function executeFileRenameAction() {
+            const newCoreName = document.getElementById('renameInputField').value.trim();
+            if (!newCoreName) {
+                alert("Filename cannot be blank!");
+                return;
+            }
+
+            const pathKey = getActivePathKey();
+            if (appState.repositories[pathKey] && appState.activeTargetRenameId) {
+                const targetRecord = appState.repositories[pathKey].find(x => x.id === appState.activeTargetRenameId);
+                if (targetRecord) {
+                    const lastDotIndex = targetRecord.name.lastIndexOf('.');
+                    const originalExt = lastDotIndex !== -1 ? targetRecord.name.substring(lastDotIndex) : "";
+                    
+                    targetRecord.name = newCoreName + originalExt;
+                    
+                    saveStateToLocalStorage();
+                    renderGalleryItemsViewGrid();
+                    closeRenameModal();
+                    showNotification("File successfully renamed! ✏️");
+                }
+            }
+        }
+
+        /*************************************************************
+         * RESET SUBFOLDER OUTPUTS REPOSITORY SYSTEM
+         *************************************************************/
+        function triggerFolderResetConfirmation() {
+            document.getElementById('resetConfirmModalOverlay').classList.add('active');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetConfirmModalOverlay').classList.remove('active');
+        }
+
+        function executeFolderResetAction() {
+            closeResetModal();
+            const pathKey = getActivePathKey();
+            
+            const splashLayer = document.getElementById('honeySplashOverlayNode');
+            if (splashLayer) {
+                splashLayer.classList.add('honey-splash-active');
+                setTimeout(() => {
+                    splashLayer.classList.remove('honey-splash-active');
+                }, 600);
+            }
+
+            if (appState.repositories[pathKey]) {
+                appState.repositories[pathKey] = [];
+                saveStateToLocalStorage();
+                
+                setTimeout(() => {
+                    renderGalleryItemsViewGrid();
+                    showNotification("Honey splash! Section repository has been reset. 🍯");
+                }, 250);
+            }
+        }
+
+        /*************************************************************
+         * IMPROVEMENT 1 & 3: COMPREHENSIVE HIGH-FIDELITY JSZIP PACKAGING
+         *************************************************************/
+        async function exportOrganizedZipSystem(onlyCurrentActiveSection = false) {
+            let keysList = [];
+            
+            if (onlyCurrentActiveSection) {
+                // Export only the currently opened class section
+                keysList = [getActivePathKey()];
+            } else {
+                // Global fallback compilation list mapping tracking parameters
+                keysList = Object.keys(appState.repositories);
+            }
+
+            let absoluteTotalFilesCount = 0;
+            keysList.forEach(k => {
+                if (appState.repositories[k]) absoluteTotalFilesCount += appState.repositories[k].length;
+            });
+
+            if (absoluteTotalFilesCount === 0) {
+                showNotification("No outputs stored inside targeted sections to package!");
+                return;
+            }
+
+            const hud = document.getElementById('zipProgressHud');
+            const filler = document.getElementById('zipProgressBarFill');
+            hud.classList.add('active');
+            filler.style.width = "5%";
+
+            const packageArchiveInstance = new JSZip();
+            const baseHubFolder = packageArchiveInstance.folder("BeeHive_Output_Hub");
+
+            let iterationProcessedIndex = 0;
+
+            for (const sectionPathKey of keysList) {
+                const submissionsList = appState.repositories[sectionPathKey] || [];
+                if (submissionsList.length === 0) continue;
+
+                const pathSlices = sectionPathKey.split('/');
+                const gradeDirectoryName = pathSlices[0] || "Unassigned Grade";
+                const sectionDirectoryName = pathSlices[1] || "General";
+
+                // Structure matches specifications requirements maps exactly
+                let targetDirectoryPointer;
+                if (onlyCurrentActiveSection) {
+                    // Structure variant: BeeHive_Output_Hub / 4A / files...
+                    targetDirectoryPointer = baseHubFolder.folder(sectionDirectoryName);
+                } else {
+                    // Global full backup nested structure variant
+                    targetDirectoryPointer = baseHubFolder.folder(gradeDirectoryName).folder(sectionDirectoryName);
+                }
+
+                for (const fileItem of submissionsList) {
+                    try {
+                        const metaHeaderIndex = fileItem.dataUrl.indexOf(',');
+                        if (metaHeaderIndex !== -1) {
+                            const coreBase64PayloadString = fileItem.dataUrl.substring(metaHeaderIndex + 1);
+                            const uniquePrefixToken = fileItem.id.split('_')[1] || Date.now();
+                            const cleanSanitizedFileName = `${uniquePrefixToken}_${fileItem.name}`;
+
+                            targetDirectoryPointer.file(cleanSanitizedFileName, coreBase64PayloadString, { base64: true });
+                        }
+                    } catch(err) {
+                        console.error("Error packaging file data frame cell context entry: ", err);
+                    }
+                    
+                    iterationProcessedIndex++;
+                    const calculatedProgressPercent = Math.min(90, Math.floor((iterationProcessedIndex / absoluteTotalFilesCount) * 100));
+                    filler.style.width = `${calculatedProgressPercent}%`;
+                }
+            }
+
+            filler.style.width = "95%";
+            document.getElementById('zipProgressStatusText').innerText = "Sealing Jar Tight...";
+
+            try {
+                const generatedBlobPackage = await packageArchiveInstance.generateAsync({ type: "blob" });
+                filler.style.width = "100%";
+                
+                const downloadAnchorLink = document.createElement('a');
+                downloadAnchorLink.href = URL.createObjectURL(generatedBlobPackage);
+                
+                const archiveNameToken = onlyCurrentActiveSection ? `Section_${appState.currentSection}` : 'Global_Archive';
+                downloadAnchorLink.download = `BeeHive_Outputs_${archiveNameToken}_${Date.now()}.zip`;
+                
+                document.body.appendChild(downloadAnchorLink);
+                downloadAnchorLink.click();
+                document.body.removeChild(downloadAnchorLink);
+
+                setTimeout(() => {
+                    hud.classList.remove('active');
+                    triggerSuccessConfettiBurst();
+                    showNotification("ZIP Package downloaded successfully! 📦🐝");
+                }, 800);
+
+            } catch (error) {
+                alert("Compression task exception encountered during generation processes.");
+                hud.classList.remove('active');
+            }
+        }
+
+        /*************************************************************
+         * INPUT PIPELINE HANDLERS (IMAGE, AUDIO RECORD, VIDEO RECORD)
+         *************************************************************/
+        function triggerImageUpload() {
+            document.getElementById('imageFileInput').click();
+        }
+
+        function handleImageUpload(event) {
+            const userFile = event.target.files[0];
+            if (!userFile) return;
+
+            const fileLoaderReader = new FileReader();
+            fileLoaderReader.onload = function(readerEvent) {
+                commitOutputRecord('image', readerEvent.target.result, userFile.name);
+            };
+            fileLoaderReader.readAsDataURL(userFile);
+            event.target.value = ""; 
+        }
+
+        async function toggleAudioRecording() {
+            const recordButton = document.getElementById('audioRecordBtn');
+            const buttonLabel = document.getElementById('audioRecordBtnText');
+
+            if (audioRecorderInstance && audioRecorderInstance.state === "recording") {
+                audioRecorderInstance.stop();
+                return;
+            }
+
+            audioRecordedChunks = [];
+            try {
+                const streamHardwareMedia = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioRecorderInstance = new MediaRecorder(streamHardwareMedia);
+                
+                audioRecorderInstance.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioRecordedChunks.push(e.data);
+                };
+
+                audioRecorderInstance.onstop = () => {
+                    const audioBlobInstance = new Blob(audioRecordedChunks, { type: 'audio/mp3' });
+                    const fileLoaderReader = new FileReader();
+                    fileLoaderReader.onload = function(e) {
+                        commitOutputRecord('audio', e.target.result);
+                    };
+                    fileLoaderReader.readAsDataURL(audioBlobInstance);
+                    
+                    streamHardwareMedia.getTracks().forEach(track => track.stop());
+                    recordButton.style.background = ""; 
+                    buttonLabel.innerText = "Record Audio";
+                };
+
+                audioRecorderInstance.start();
+                recordButton.style.background = "#FFC107";
+                buttonLabel.innerText = "🛑 Stop Audio";
+                showNotification("Recording student voice... 🎙️");
+            } catch (err) {
+                alert("Microphone hardware access denied or not found.");
+            }
+        }
+
+        async function toggleVideoRecording() {
+            const previewWrapper = document.getElementById('camera-preview-container');
+            const targetVideoTrack = document.getElementById('camera-preview');
+            const captureActionTrigger = document.getElementById('camCaptureBtn');
+            const recordButton = document.getElementById('videoRecordBtn');
+            const buttonLabel = document.getElementById('videoRecordBtnText');
+
+            if (videoRecorderInstance && videoRecorderInstance.state === "recording") {
+                videoRecorderInstance.stop();
+                return;
+            }
+
+            try {
+                videoStreamInstance = await navigator.mediaDevices.getUserMedia({ video: { width: 640 }, audio: true });
+                targetVideoTrack.srcObject = videoStreamInstance;
+                previewWrapper.style.display = "block";
+                
+                videoRecordedChunks = [];
+                videoRecorderInstance = new MediaRecorder(videoStreamInstance);
+                
+                videoRecorderInstance.ondataavailable = (e) => {
+                    if (e.data.size > 0) videoRecordedChunks.push(e.data);
+                };
+
+                videoRecorderInstance.onstop = () => {
+                    const videoBlobInstance = new Blob(videoRecordedChunks, { type: 'video/mp4' });
+                    const fileLoaderReader = new FileReader();
+                    fileLoaderReader.onload = function(e) {
+                        commitOutputRecord('video', e.target.result);
+                    };
+                    fileLoaderReader.readAsDataURL(videoBlobInstance);
+                    stopVideoHardwareStreaming();
+                };
+
+                videoRecorderInstance.start();
+                recordButton.style.background = "#DC3545";
+                buttonLabel.innerText = "🛑 Stop Video";
+                showNotification("Recording student presentation... 🎥");
+
+                captureActionTrigger.onclick = () => {
+                    captureStaticImageFromVideoStream(targetVideoTrack);
+                };
+
+            } catch (err) {
+                alert("Camera hardware access denied or unavailable.");
+            }
+        }
+
+        function captureStaticImageFromVideoStream(videoTrackNode) {
+            const localCanvasEngine = document.createElement('canvas');
+            localCanvasEngine.width = videoTrackNode.videoWidth || 640;
+            localCanvasEngine.height = videoTrackNode.videoHeight || 480;
+            const context = localCanvasEngine.getContext('2d');
+            context.drawImage(videoTrackNode, 0, 0, localCanvasEngine.width, localCanvasEngine.height);
+            
+            const frameSnapshotUrl = localCanvasEngine.toDataURL('image/jpeg');
+            commitOutputRecord('image', frameSnapshotUrl, `CamSnapshot_${Date.now()}.jpeg`);
+        }
+
+        function stopVideoHardwareStreaming() {
+            if (videoStreamInstance) {
+                videoStreamInstance.getTracks().forEach(track => track.stop());
+                videoStreamInstance = null;
+            }
+            document.getElementById('camera-preview-container').style.display = "none";
+            document.getElementById('videoRecordBtn').style.background = "";
+            document.getElementById('videoRecordBtnText').innerText = "Record Video";
+        }
+
+        function saveToDesktopZipMock() {
+            const targetKey = getActivePathKey();
+            const collection = appState.repositories[targetKey] || [];
+            
+            if (collection.length === 0) {
+                showNotification("No data inside section to download!");
+                return;
+            }
+
+            let catalogIndexManifest = `BEEHIVE APP LOCAL FILE SYSTEM EXPORT DATA RECORD\n`;
+            catalogIndexManifest += `Structure Target: ${appState.currentGrade} > ${appState.currentSection}\n`;
+            catalogIndexManifest += `===============================================\n\n`;
+
+            collection.forEach((item, index) => {
+                catalogIndexManifest += `File: [${index + 1}] - Name: ${item.name} | Type: ${item.type} | Created: ${item.timestamp}\n`;
+                
+                const virtualAnchorElement = document.createElement('a');
+                virtualAnchorElement.href = item.dataUrl;
+                virtualAnchorElement.download = `${appState.currentGrade}_${appState.currentSection}_${item.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase()}`;
+                document.body.appendChild(virtualAnchorElement);
+                virtualAnchorElement.click();
+                document.body.removeChild(virtualAnchorElement);
+            });
+
+            const proceduralBlob = new Blob([catalogIndexManifest], { type: 'text/plain' });
+            const textUrlAnchor = document.createElement('a');
+            textUrlAnchor.href = URL.createObjectURL(proceduralBlob);
+            textUrlAnchor.download = `${appState.currentGrade}_${appState.currentSection}_EXPORTS_MANIFEST.txt`;
+            textUrlAnchor.click();
+
+            showNotification("Files processed individually matching structured hierarchy configurations!");
+        }
+
+        /*************************************************************
+         * OUTPUT VIEWER LIGHTBOX PLATFORM ENGINE CONTEXT
+         *************************************************************/
+        function launchMultimediaLightbox(itemRecord) {
+            const lightbox = document.getElementById('mediaLightbox');
+            const wrapper = document.getElementById('lightboxWrapper');
+            const zoomUi = document.getElementById('lightboxZoomControls');
+            
+            wrapper.innerHTML = "";
+            resetZoomLevel();
+            lightbox.classList.add('active');
+
+            if (itemRecord.type === 'image') {
+                const img = document.createElement('img');
+                img.src = itemRecord.dataUrl;
+                img.className = "lightbox-media";
+                img.id = "targetLightboxMediaNode";
+                wrapper.appendChild(img);
+                zoomUi.style.display = "flex";
+                attachDragAndDropToLightboxContent(img);
+            } else if (itemRecord.type === 'video') {
+                const vid = document.createElement('video');
+                vid.src = itemRecord.dataUrl;
+                vid.controls = true;
+                vid.autoplay = true;
+                vid.className = "lightbox-media";
+                wrapper.appendChild(vid);
+                zoomUi.style.display = "none";
+            } else if (itemRecord.type === 'audio') {
+                zoomUi.style.display = "none";
+                const containerUi = document.createElement('div');
+                containerUi.className = "lightbox-audio-ui";
+                
+                const icon = document.createElement('div');
+                icon.style.fontSize = "5rem"; icon.style.marginBottom = "20px";
+                icon.innerText = "🐝🎵";
+                
+                const title = document.createElement('p');
+                title.style.marginBottom = "20px"; title.style.fontSize = "1.2rem";
+                title.innerText = itemRecord.name;
+
+                const aud = document.createElement('audio');
+                aud.src = itemRecord.dataUrl;
+                aud.controls = true;
+                aud.autoplay = true;
+
+                containerUi.appendChild(icon);
+                containerUi.appendChild(title);
+                containerUi.appendChild(aud);
+                wrapper.appendChild(containerUi);
+            }
+        }
+
+        function closeLightbox() {
+            document.getElementById('mediaLightbox').classList.remove('active');
+            document.getElementById('lightboxWrapper').innerHTML = ""; 
+        }
+
+        function adjustZoomLevel(amount) {
+            const target = document.getElementById('targetLightboxMediaNode');
+            if (!target) return;
+            currentZoomScale = Math.max(0.5, Math.min(4, currentZoomScale + amount));
+            applyLightboxTransformations();
+        }
+
+        function resetZoomLevel() {
+            currentZoomScale = 1;
+            currentDragTransformPosition = { x: 0, y: 0 };
+            applyLightboxTransformations();
+        }
+
+        function applyLightboxTransformations() {
+            const target = document.getElementById('targetLightboxMediaNode');
+            if (target) {
+                target.style.transform = `translate(${currentDragTransformPosition.x}px, ${currentDragTransformPosition.y}px) scale(${currentZoomScale})`;
+            }
+        }
+
+        function attachDragAndDropToLightboxContent(elementNode) {
+            const triggerDragStart = (e) => {
+                isDraggingLightboxElement = true;
+                const pointerEvent = e.touches ? e.touches[0] : e;
+                startDragCoordinates.x = pointerEvent.clientX - currentDragTransformPosition.x;
+                startDragCoordinates.y = pointerEvent.clientY - currentDragTransformPosition.y;
+            };
+
+            const triggerDragMove = (e) => {
+                if (!isDraggingLightboxElement) return;
+                e.preventDefault();
+                const pointerEvent = e.touches ? e.touches[0] : e;
+                currentDragTransformPosition.x = pointerEvent.clientX - startDragCoordinates.x;
+                currentDragTransformPosition.y = pointerEvent.clientY - startDragCoordinates.y;
+                applyLightboxTransformations();
+            };
+
+            const triggerDragEnd = () => { isDraggingLightboxElement = false; };
+
+            elementNode.addEventListener('mousedown', triggerDragStart);
+            window.addEventListener('mousemove', triggerDragMove);
+            window.addEventListener('mouseup', triggerDragEnd);
+
+            elementNode.addEventListener('touchstart', triggerDragStart, { passive: false });
+            window.addEventListener('touchmove', triggerDragMove, { passive: false });
+            window.addEventListener('touchend', triggerDragEnd);
+        }
+
+        function setupPinchZoomOnLightbox() {
+            const targetArea = document.getElementById('lightboxWrapper');
+            let initialFingerDistance = 0;
+
+            targetArea.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialFingerDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+            });
+
+            targetArea.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialFingerDistance > 0) {
+                    e.preventDefault();
+                    const liveDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const factorDelta = (liveDistance - initialFingerDistance) * 0.01;
+                    initialFingerDistance = liveDistance;
+                    adjustZoomLevel(factorDelta);
+                }
+            });
+
+            targetArea.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) initialFingerDistance = 0;
+            });
+
+            let lastTapTimeTimestamp = 0;
+            targetArea.addEventListener('click', () => {
+                const timeNow = Date.now();
+                if ((timeNow - lastTapTimeTimestamp) < 300) {
+                    if (currentZoomScale > 1) resetZoomLevel();
+                    else adjustZoomLevel(1);
+                }
+                lastTapTimeTimestamp = timeNow;
+            });
+        }
+
+        /*************************************************************
+         * PRESENTATION MODULE WITH COMPREHENSIVE CANVAS & MEDIA ZOOM
+         *************************************************************/
+        function initializePresentationCanvasEngines() {
+            const canvas = document.getElementById('annotationCanvas');
+            const laserCanvas = document.getElementById('laser-pointer-layer');
+            
+            canvasContext = canvas.getContext('2d');
+            laserContext = laserCanvas.getContext('2d');
+
+            window.addEventListener('resize', synchronizePresentationCanvasDimensions);
+        }
+
+        function synchronizePresentationCanvasDimensions() {
+            const stage = document.getElementById('presentationStage');
+            const canvases = [document.getElementById('annotationCanvas'), document.getElementById('laser-pointer-layer')];
+            
+            canvases.forEach(canvas => {
+                if (canvas) {
+                    canvas.width = stage.clientWidth;
+                    canvas.height = stage.clientHeight;
+                }
+            });
+            redrawCanvasFromHistoryStack();
+        }
+
+        // IMPROVEMENT 2: Augmented presentation trigger module to target ONLY the specifically passed item parameter payload
+        function enterPresentationMode(itemRecord) {
+            if (!itemRecord) {
+                showNotification("No input asset selected to present!");
+                return;
+            }
+
+            const mediaHost = document.getElementById('presMediaHost');
+            mediaHost.innerHTML = "";
+            resetPresentationZoom();
+
+            if (itemRecord.type === 'image') {
+                const img = document.createElement('img');
+                img.src = itemRecord.dataUrl;
+                img.className = "pres-media-frame";
+                mediaHost.appendChild(img);
+            } else if (itemRecord.type === 'video') {
+                const vid = document.createElement('video');
+                vid.src = itemRecord.dataUrl;
+                vid.className = "pres-media-frame";
+                vid.controls = true; vid.autoplay = true;
+                mediaHost.appendChild(vid);
+            } else if (itemRecord.type === 'audio') {
+                const uiBox = document.createElement('div');
+                uiBox.style.cssText = "background: white; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); pointer-events: auto;";
+                uiBox.innerHTML = `<div style="font-size:3rem; margin-bottom:10px;">🐝🎵</div><p style="margin-bottom:15px; color:#333;">${itemRecord.name}</p>`;
+                
+                const aud = document.createElement('audio');
+                aud.src = itemRecord.dataUrl;
+                aud.controls = true; aud.autoplay = true;
+                uiBox.appendChild(aud);
+                mediaHost.appendChild(uiBox);
+            }
+
+            document.getElementById('presWorkspaceTitle').innerText = `Presenting Output: ${itemRecord.name}`;
+            document.getElementById('presentationWorkspace').classList.add('active');
+            
+            setTimeout(() => {
+                synchronizePresentationCanvasDimensions();
+                clearPresentationCanvas();
+                setupPresentationCanvasEventHooks();
+            }, 150);
+
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        }
+
+        function exitPresentationMode() {
+            document.getElementById('presentationWorkspace').classList.remove('active');
+            document.querySelectorAll('.sticky-note').forEach(note => note.remove());
+
+            if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(()=>{});
+        }
+
+        function setPresentationTool(toolName) {
+            activePresentationTool = toolName;
+            document.querySelectorAll('.annotation-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+            const matchedBtn = document.getElementById(`tool-${toolName}`);
+            if (matchedBtn) matchedBtn.classList.add('active');
+        }
+
+        function setAnnotationColor(hexColor, targetElement) {
+            currentAnnotationColor = hexColor;
+            document.querySelectorAll('.color-swatch').forEach(swatch => swatch.classList.remove('active'));
+            targetElement.classList.add('active');
+        }
+
+        // IMPROVEMENT 5: Added programmatic view transform handlers computing matrix alignments smoothly
+        function adjustPresentationZoom(amount) {
+            presZoomScale = Math.max(0.5, Math.min(5, presZoomScale + amount));
+            applyPresentationTransforms();
+        }
+
+        function resetPresentationZoom() {
+            presZoomScale = 1;
+            presPanOffset = { x: 0, y: 0 };
+            applyPresentationTransforms();
+        }
+
+        function applyPresentationTransforms() {
+            const container = document.getElementById('presTransformContainer');
+            if (container) {
+                container.style.transform = `translate(${presPanOffset.x}px, ${presPanOffset.y}px) scale(${presZoomScale})`;
+            }
+        }
+
+        // IMPROVEMENT 5: Integrated gesture mapping modules ensuring multi-touch hardware compatibility
+        function setupPresentationGestureInterfaces() {
+            const stage = document.getElementById('presentationStage');
+            let initialDistance = 0;
+
+            stage.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    isPanningPresentationStage = true;
+                    initialDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    presPanStartCoordinates.x = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - presPanOffset.x;
+                    presPanStartCoordinates.y = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - presPanOffset.y;
+                }
+            });
+
+            stage.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && isPanningPresentationStage) {
+                    e.preventDefault();
+                    
+                    // 1. Process Pinch Zoom calculations
+                    const liveDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const factorDelta = (liveDistance - initialDistance) * 0.01;
+                    initialDistance = liveDistance;
+                    adjustPresentationZoom(factorDelta);
+
+                    // 2. Process concurrent dragging/panning movement calculation maps
+                    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    presPanOffset.x = midX - presPanStartCoordinates.x;
+                    presPanOffset.y = midY - presPanStartCoordinates.y;
+                    
+                    applyPresentationTransforms();
+                }
+            });
+
+            stage.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    isPanningPresentationStage = false;
+                    initialDistance = 0;
+                }
+            });
+
+            // Double tap trigger integration configuration
+            let lastTapTime = 0;
+            stage.addEventListener('click', (e) => {
+                // Ignore double click zoom execution patterns if laser pointer tool mode is running
+                if (activePresentationTool === 'laser') return;
+                
+                const timeNow = Date.now();
+                if ((timeNow - lastTapTime) < 300) {
+                    if (presZoomScale > 1) resetPresentationZoom();
+                    else adjustPresentationZoom(1);
+                }
+                lastTapTime = timeNow;
+            });
+        }
+
+        function setupPresentationCanvasEventHooks() {
+            const canvas = document.getElementById('annotationCanvas');
+
+            const pullCoordinatesFromEvent = (e) => {
+                const bounds = canvas.getBoundingClientRect();
+                const clientSource = e.touches ? e.touches[0] : e;
+                
+                // Transpose calculation nodes through viewport transformation matrix offsets securely
+                return {
+                    x: (clientSource.clientX - bounds.left) / presZoomScale,
+                    y: (clientSource.clientY - bounds.top) / presZoomScale
+                };
+            };
+
+            const paintStart = (e) => {
+                // If secondary pointers are operational, let structural panning gestures lock out standard ink brushes
+                if (e.touches && e.touches.length > 1) return;
+
+                const coordinates = pullCoordinatesFromEvent(e);
+                
+                if (activePresentationTool === 'laser') {
+                    renderLaserPointerEffect(coordinates);
+                    return;
+                }
+
+                isPaintingOnCanvas = true;
+                canvasCurrentPointsTrack = [coordinates];
+                
+                canvasContext.beginPath();
+                canvasContext.moveTo(coordinates.x, coordinates.y);
+                configureCanvasBrushContextStyle();
+            };
+
+            const paintMove = (e) => {
+                if (e.touches && e.touches.length > 1) return;
+                const coordinates = pullCoordinatesFromEvent(e);
+
+                if (activePresentationTool === 'laser') {
+                    renderLaserPointerEffect(coordinates);
+                    return;
+                }
+
+                if (!isPaintingOnCanvas) return;
+                
+                canvasCurrentPointsTrack.push(coordinates);
+                canvasContext.lineTo(coordinates.x, coordinates.y);
+                canvasContext.stroke();
+            };
+
+            const paintEnd = () => {
+                if (!isPaintingOnCanvas) return;
+                isPaintingOnCanvas = false;
+                
+                canvasDrawingHistoryStack.push({
+                    tool: activePresentationTool,
+                    color: currentAnnotationColor,
+                    points: [...canvasCurrentPointsTrack]
+                });
+            };
+
+            canvas.onmousedown = paintStart;
+            canvas.onmousemove = paintMove;
+            window.onmouseup = paintEnd;
+
+            canvas.ontouchstart = (e) => { e.preventDefault(); paintStart(e); };
+            canvas.ontouchmove = (e) => { e.preventDefault(); paintMove(e); };
+            window.ontouchend = paintEnd;
+        }
+
+        function configureCanvasBrushContextStyle() {
+            if (activePresentationTool === 'highlighter') {
+                canvasContext.globalAlpha = 0.4;
+                canvasContext.lineWidth = 25;
+                canvasContext.lineCap = 'square';
+                canvasContext.strokeStyle = currentAnnotationColor;
+                canvasContext.globalCompositeOperation = "source-over";
+            } else if (activePresentationTool === 'eraser') {
+                canvasContext.globalAlpha = 1.0;
+                canvasContext.lineWidth = 40;
+                canvasContext.lineCap = 'round';
+                canvasContext.strokeStyle = "rgba(0,0,0,1)";
+                canvasContext.globalCompositeOperation = "destination-out";
+            } else { 
+                canvasContext.globalAlpha = 1.0;
+                canvasContext.lineWidth = 6;
+                canvasContext.lineCap = 'round';
+                canvasContext.strokeStyle = currentAnnotationColor;
+                canvasContext.globalCompositeOperation = "source-over";
+            }
+        }
+
+        function redrawCanvasFromHistoryStack() {
+            if (!canvasContext) return;
+            canvasContext.clearRect(0, 0, canvasContext.canvas.width, canvasContext.canvas.height);
+
+            canvasDrawingHistoryStack.forEach(stroke => {
+                if (stroke.points.length < 1) return;
+                
+                const historicalToolBackup = activePresentationTool;
+                const historicalColorBackup = currentAnnotationColor;
+                
+                activePresentationTool = stroke.tool;
+                currentAnnotationColor = stroke.color;
+                configureCanvasBrushContextStyle();
+
+                canvasContext.beginPath();
+                canvasContext.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for(let i=1; i<stroke.points.length; i++) {
+                    canvasContext.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                canvasContext.stroke();
+
+                activePresentationTool = historicalToolBackup;
+                currentAnnotationColor = historicalColorBackup;
+            });
+            configureCanvasBrushContextStyle(); 
+        }
+
+        function undoLastCanvasStroke() {
+            canvasDrawingHistoryStack.pop();
+            redrawCanvasFromHistoryStack();
+        }
+
+        function clearPresentationCanvas() {
+            canvasDrawingHistoryStack = [];
+            canvasContext.clearRect(0, 0, canvasContext.canvas.width, canvasContext.canvas.height);
+            laserContext.clearRect(0, 0, laserContext.canvas.width, laserContext.canvas.height);
+        }
+
+        function renderLaserPointerEffect(coords) {
+            laserContext.clearRect(0, 0, laserContext.canvas.width, laserContext.canvas.height);
+            
+            laserContext.beginPath();
+            laserContext.arc(coords.x, coords.y, 10, 0, Math.PI * 2);
+            laserContext.fillStyle = '#FF0000';
+            laserContext.shadowBlur = 15;
+            laserContext.shadowColor = '#FF0000';
+            laserContext.fill();
+            
+            laserContext.shadowBlur = 0;
+
+            clearTimeout(window.laserTimeoutPointerID);
+            window.laserTimeoutPointerID = setTimeout(() => {
+                laserContext.clearRect(0, 0, laserContext.canvas.width, laserContext.canvas.height);
+            }, 600);
+        }
+
+        function triggerStickyNoteCreation() {
+            const stage = document.getElementById('presentationStage');
+            const noteNode = document.createElement('div');
+            noteNode.className = "sticky-note";
+            noteNode.style.top = "100px";
+            noteNode.style.left = "100px";
+            noteNode.style.pointerEvents = "auto"; 
+
+            const closer = document.createElement('div');
+            closer.className = "close-note";
+            closer.innerText = "✕";
+            closer.onclick = () => noteNode.remove();
+
+            const area = document.createElement('textarea');
+            area.placeholder = "Type report notes here...";
+
+            noteNode.appendChild(closer);
+            noteNode.appendChild(area);
+            stage.appendChild(noteNode);
+
+            noteNode.addEventListener('mousedown', (e) => {
+                if (e.target === area) return; 
+                let initialX = e.clientX - noteNode.offsetLeft;
+                let initialY = e.clientY - noteNode.offsetTop;
+                
+                const moveNote = (moveEvent) => {
+                    noteNode.style.left = (moveEvent.clientX - initialX) + "px";
+                    noteNode.style.top = (moveEvent.clientY - initialY) + "px";
+                };
+                window.addEventListener('mousemove', moveNote);
+                window.addEventListener('mouseup', () => window.removeEventListener('mousemove', moveNote), {once:true});
+            });
+
+            noteNode.addEventListener('touchstart', (e) => {
+                if (e.target === area) return;
+                let touch = e.touches[0];
+                let initialX = touch.clientX - noteNode.offsetLeft;
+                let initialY = touch.clientY - noteNode.offsetTop;
+                
+                const touchMoveNote = (moveEvent) => {
+                    let liveTouch = moveEvent.touches[0];
+                    noteNode.style.left = (liveTouch.clientX - initialX) + "px";
+                    noteNode.style.top = (liveTouch.clientY - initialY) + "px";
+                };
+                window.addEventListener('touchmove', touchMoveNote, {passive:false});
+                window.addEventListener('touchend', () => window.removeEventListener('touchmove', touchMoveNote), {once:true});
+            });
+        }
+
+        function capturePresentationSnapshot() {
+            const compositeVirtualCanvas = document.createElement('canvas');
+            const targetCanvas = document.getElementById('annotationCanvas');
+            compositeVirtualCanvas.width = targetCanvas.width;
+            compositeVirtualCanvas.height = targetCanvas.height;
+            
+            const runtimeContext = compositeVirtualCanvas.getContext('2d');
+            runtimeContext.fillStyle = "#1e1e1e";
+            runtimeContext.fillRect(0,0, compositeVirtualCanvas.width, compositeVirtualCanvas.height);
+            runtimeContext.drawImage(targetCanvas, 0, 0);
+
+            const capturedDataUrlString = compositeVirtualCanvas.toDataURL('image/jpeg');
+            commitOutputRecord('image', capturedDataUrlString, `BoardSnapshot_${Date.now()}.jpeg`);
+            showNotification("Presentation snapshot committed directly to portfolio archive! 📸");
+        }
+
+        /*************************************************************
+         * PERSISTENT BACKUP ENGINE DATA UTILITY SUBSYSTEMS
+         *************************************************************/
+        function exportBackupJSON() {
+            const parsedDataPayloadString = JSON.stringify(appState.repositories, null, 2);
+            const standardBlobInstance = new Blob([parsedDataPayloadString], { type: 'application/json' });
+            
+            const downloadingAnchor = document.createElement('a');
+            downloadingAnchor.href = URL.createObjectURL(standardBlobInstance);
+            downloadingAnchor.download = `BEEHIVE_SYSTEM_PORTFOLIO_BACKUP_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(downloadingAnchor);
+            downloadingAnchor.click();
+            document.body.removeChild(downloadingAnchor);
+            showNotification("System archive database downloaded successfully!");
+        }
+
+        function triggerImportBackupJSON() {
+            document.getElementById('importBackupFile').click();
+        }
+
+        function importBackupJSON(event) {
+            const selectedFile = event.target.files[0];
+            if (!selectedFile) return;
+
+            const readerInstance = new FileReader();
+            readerInstance.onload = function(e) {
+                try {
+                    const compiledDatabasePayload = JSON.parse(e.target.result);
+                    if (typeof compiledDatabasePayload === 'object' && !Array.isArray(compiledDatabasePayload)) {
+                        appState.repositories = compiledDatabasePayload;
+                        saveStateToLocalStorage();
+                        showNotification("Portfolio system restored safely! 🍯");
+                        if (document.getElementById('workspaceScreen').classList.contains('active')) {
+                            renderGalleryItemsViewGrid();
+                        }
+                    } else {
+                        alert("Invalid database configuration layout properties mapping.");
+                    }
+                } catch (err) {
+                    alert("Failure parsing structural backup file sequence safely.");
+                }
+            };
+            readerInstance.readAsText(selectedFile);
+            event.target.value = ""; 
+        }
+
+        /*************************************************************
+         * CELEBRATORY VISUAL EFFECTS PARTICLES SYSTEM (CONFETTI)
+         *************************************************************/
+        function triggerSuccessConfettiBurst() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            let particlesArray = [];
+            const colorationPool = ['#FFDE4D', '#FFF', '#93E9BE', '#AEE2FF', '#FF7B7B'];
+
+            for (let i = 0; i < 75; i++) {
+                particlesArray.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    radius: Math.random() * 5 + 4,
+                    color: colorationPool[Math.floor(Math.random() * colorationPool.length)],
+                    speedX: Math.random() * 12 - 6,
+                    speedY: Math.random() * -15 - 5,
+                    gravity: 0.4
+                });
+            }
+
+            function runConfettiAnimationLoop() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let aliveElementsFound = false;
+
+                particlesArray.forEach(p => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    p.speedY += p.gravity;
+
+                    if (p.y <= canvas.height) {
+                        aliveElementsFound = true;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.fill();
+                    }
+                });
+
+                if (aliveElementsFound) {
+                    requestAnimationFrame(runConfettiAnimationLoop);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            runConfettiAnimationLoop();
+        }
+    </script>
+</body>
+</html>
